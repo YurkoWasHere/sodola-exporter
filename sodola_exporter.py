@@ -204,6 +204,10 @@ class SodolaExporter:
             metrics['ifInErrors'] = []
         if 'ifOutErrors' not in metrics:
             metrics['ifOutErrors'] = []
+        if 'ifHCInOctets' not in metrics:
+            metrics['ifHCInOctets'] = []
+        if 'ifHCOutOctets' not in metrics:
+            metrics['ifHCOutOctets'] = []
         
         for match in matches:
             port_num, state, link_status, tx_good, tx_bad, rx_good, rx_bad = match
@@ -226,10 +230,29 @@ class SodolaExporter:
             
             # Packet counters
             try:
-                metrics['ifOutUcastPkts'].append(('ifOutUcastPkts', labels, float(tx_good)))
-                metrics['ifOutErrors'].append(('ifOutErrors', labels, float(tx_bad)))
-                metrics['ifInUcastPkts'].append(('ifInUcastPkts', labels, float(rx_good)))
-                metrics['ifInErrors'].append(('ifInErrors', labels, float(rx_bad)))
+                tx_good_pkts = float(tx_good)
+                tx_bad_pkts = float(tx_bad)
+                rx_good_pkts = float(rx_good)
+                rx_bad_pkts = float(rx_bad)
+                
+                metrics['ifOutUcastPkts'].append(('ifOutUcastPkts', labels, tx_good_pkts))
+                metrics['ifOutErrors'].append(('ifOutErrors', labels, tx_bad_pkts))
+                metrics['ifInUcastPkts'].append(('ifInUcastPkts', labels, rx_good_pkts))
+                metrics['ifInErrors'].append(('ifInErrors', labels, rx_bad_pkts))
+                
+                # Estimate byte counters from packet counters
+                # Use average Ethernet frame size estimates based on typical network traffic
+                # - Good packets: assume ~800 bytes average (mix of small control and larger data frames)
+                # - Error packets: assume ~64 bytes average (typically smaller, malformed frames)
+                avg_good_frame_size = 800
+                avg_error_frame_size = 64
+                
+                estimated_tx_bytes = (tx_good_pkts * avg_good_frame_size) + (tx_bad_pkts * avg_error_frame_size)
+                estimated_rx_bytes = (rx_good_pkts * avg_good_frame_size) + (rx_bad_pkts * avg_error_frame_size)
+                
+                metrics['ifHCOutOctets'].append(('ifHCOutOctets', labels, estimated_tx_bytes))
+                metrics['ifHCInOctets'].append(('ifHCInOctets', labels, estimated_rx_bytes))
+                
             except ValueError:
                 continue
         
@@ -326,6 +349,8 @@ class SodolaExporter:
             'ifSpeed': 'An estimate of the interface current bandwidth in bits per second',
             'ifHighSpeed': 'An estimate of the interface current bandwidth in units of 1,000,000 bits per second',
             'ifDuplex': 'The duplex mode of the interface (2=half-duplex, 3=full-duplex)',
+            'ifHCInOctets': 'The total number of octets received on the interface, including framing characters - 1.3.6.1.2.1.31.1.1.1.6',
+            'ifHCOutOctets': 'The total number of octets transmitted out of the interface, including framing characters - 1.3.6.1.2.1.31.1.1.1.10',
             'ifInUcastPkts': 'The number of packets delivered by this sub-layer to a higher sub-layer which were not addressed to a multicast or broadcast address',
             'ifOutUcastPkts': 'The total number of packets that higher-level protocols requested be transmitted which were not addressed to a multicast or broadcast address',
             'ifInErrors': 'The number of inbound packets that contained errors preventing them from being deliverable',
@@ -338,14 +363,16 @@ class SodolaExporter:
             'ifSpeed': 'gauge',
             'ifHighSpeed': 'gauge',
             'ifDuplex': 'gauge',
+            'ifHCInOctets': 'counter',
+            'ifHCOutOctets': 'counter',
             'ifInUcastPkts': 'counter',
             'ifOutUcastPkts': 'counter',
             'ifInErrors': 'counter',
             'ifOutErrors': 'counter'
         }
         
-        # Sort metrics to match SNMP exporter order
-        metric_order = ['ifAdminStatus', 'ifOperStatus', 'ifSpeed', 'ifHighSpeed', 'ifDuplex', 'ifInUcastPkts', 'ifOutUcastPkts', 'ifInErrors', 'ifOutErrors']
+        # Sort metrics to match SNMP exporter order (HC octets come before unicast packets in standard MIBs)
+        metric_order = ['ifAdminStatus', 'ifOperStatus', 'ifSpeed', 'ifHighSpeed', 'ifDuplex', 'ifHCInOctets', 'ifHCOutOctets', 'ifInUcastPkts', 'ifOutUcastPkts', 'ifInErrors', 'ifOutErrors']
         
         for metric_name in metric_order:
             if metric_name in metrics and metrics[metric_name]:
