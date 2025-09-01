@@ -1,0 +1,25 @@
+[
+  {
+    "targets": [
+      "192.168.40.6:80",
+      "192.168.40.4:80", 
+      "192.168.40.3:80"
+    ],
+    "labels": {
+      "env": "production",
+      "location": "datacenter-1",
+      "device_type": "sodola_switch"
+    }
+  },
+  {
+    "targets": [
+      "192.168.50.10:80",
+      "192.168.50.11:80"
+    ],
+    "labels": {
+      "env": "staging", 
+      "location": "office",
+      "device_type": "sodola_switch"
+    }
+  }
+]

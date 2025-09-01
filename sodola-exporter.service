@@ -1,0 +1,35 @@
+[Unit]
+Description=Sodola HTTP Exporter for Prometheus
+Documentation=https://github.com/your-org/sodola-exporter
+After=network.target
+
+[Service]
+Type=simple
+User=prometheus
+Group=prometheus
+ExecStart=/usr/bin/python3 /opt/sodola-exporter/sodola_http_exporter.py --host 0.0.0.0 --port 9118 --log-level INFO
+WorkingDirectory=/opt/sodola-exporter
+Restart=always
+RestartSec=10
+
+# Security settings
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/var/log/sodola-exporter
+
+# Resource limits
+LimitNOFILE=8192
+
+# Environment
+Environment=PYTHONPATH=/opt/sodola-exporter
+Environment=PYTHONUNBUFFERED=1
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sodola-exporter
+
+[Install]
+WantedBy=multi-user.target

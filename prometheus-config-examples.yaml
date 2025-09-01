@@ -1,0 +1,127 @@
+# Prometheus Configuration Examples for Sodola Exporter
+
+# Example 1: Static configuration with multiple targets
+scrape_configs:
+  - job_name: 'sodola-switches'
+    static_configs:
+      - targets:
+        - 192.168.40.6    # Sodola switch 1
+        - 192.168.40.4    # Sodola switch 2
+        - 192.168.40.3    # Sodola switch 3
+    metrics_path: /sodola
+    params:
+      username: [admin]
+      password: [admin]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9118  # The Sodola exporter's hostname:port
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+---
+
+# Example 2: File-based service discovery (similar to your SNMP example)
+scrape_configs:
+  - job_name: 'sodola-network'
+    file_sd_configs:
+      - files:
+        - '/opt/prometheus/sodola.network.d/*.json'
+    metrics_path: /sodola
+    params:
+      username: [admin]
+      password: [admin]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9118  # The Sodola exporter's hostname:port
+    scrape_interval: 30s
+    scrape_timeout: 15s
+
+---
+
+# Example 3: Different credentials per device
+scrape_configs:
+  - job_name: 'sodola-admin'
+    static_configs:
+      - targets: [192.168.40.6]
+        labels:
+          env: 'production'
+          location: 'datacenter'
+    metrics_path: /sodola
+    params:
+      username: [admin]
+      password: [admin123]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9118
+        
+  - job_name: 'sodola-readonly'
+    static_configs:
+      - targets: [192.168.40.4, 192.168.40.3]
+        labels:
+          env: 'development'
+          location: 'office'
+    metrics_path: /sodola
+    params:
+      username: [readonly]
+      password: [readonly]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9118
+
+---
+
+# Example 4: High availability with multiple exporter instances
+scrape_configs:
+  - job_name: 'sodola-ha'
+    static_configs:
+      - targets:
+        - 192.168.40.6
+        - 192.168.40.4
+    metrics_path: /sodola
+    params:
+      username: [admin]
+      password: [admin]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9118
+    # Backup exporter instances
+    # If primary fails, Prometheus will try these
+    honor_labels: true
+    
+  - job_name: 'sodola-ha-backup'
+    static_configs:
+      - targets:
+        - 192.168.40.6
+        - 192.168.40.4
+    metrics_path: /sodola  
+    params:
+      username: [admin]
+      password: [admin]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance  
+      - target_label: __address__
+        replacement: backup-host:9118
+    scrape_interval: 60s  # Less frequent for backup
