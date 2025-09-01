@@ -186,8 +186,8 @@ class SodolaExporter:
         metrics = {}
         
         # Parse the port statistics table
-        # Look for table rows with port data
-        port_pattern = r'<tr>\s*<td>Port\s+(\d+)</td>\s*<td>([^<]+)</td>\s*<td>([^<]+)</td>\s*<td>(\d+)</td>\s*<td>(\d+)</td>\s*<td>(\d+)</td>\s*<td>(\d+)</td>\s*</tr>'
+        # Look for table rows with port data - handle different HTML formats
+        port_pattern = r'<tr>\s*<td[^>]*>Port\s+(\d+)</td>\s*<td[^>]*>([^<]+)</td>\s*<td[^>]*>([^<]+)</td>\s*<td[^>]*>(\d+)</td>\s*<td[^>]*>(\d+)</td>\s*<td[^>]*>(\d+)</td>\s*<td[^>]*>(\d+)</td>\s*</tr>'
         
         matches = re.findall(port_pattern, html, re.IGNORECASE)
         
